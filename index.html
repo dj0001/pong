@@ -1,0 +1,270 @@
+<!DOCTYPE HTML>
+<html manifest="pong.appcache" lang="en"> <!-- Works offline to -->
+    <head>
+        <title>Pong V1.5</title>
+<meta content='width=device-width' name='viewport' />
+<meta name="description" content="1 or 2player">
+<meta name="author" content="DJ">
+	<meta name="mobile-web-app-capable" content="yes">
+	<link rel="manifest" href="manifest.json">
+	<link rel="icon" sizes="64x64" href="icon.png">
+<link href='https://fonts.googleapis.com/css?family=Rationale&amp;text=0123456789' rel='stylesheet' type='text/css'>
+    </head>
+    <body style='margin: 0px; overflow: hidden; font:1.5em "Rationale", Helvetica; color:white'>
+
+        <canvas id="game" style='position: absolute' ondblclick='velo=1*prompt("speed",velo)||velo' title="pause"></canvas>
+        <div id="l" style=' position: absolute;top: 0px; left: 0px; width:40px;height: 100% ' title="w&#10;s"></div>
+        <div id="r" style=' position: absolute;top: 0px; right: 0px; width:40px;height: 100% ' title="&uarr;&#10;&darr;"></div>
+        <div id="display1" style='position: absolute;top: 4px; left: 25%'>0</div>
+        <div id="display2" style='position: absolute;top: 4px; left: 75%'>0</div>
+
+<script>
+var velo=1, padh=1, angle=1, cap=15  //edit here
+    velo *= (window.innerWidth-80)/512
+    padh *= 28*window.innerHeight/256
+
+function Game() {
+    if("vibrate" in navigator) navigator.vibrate(100)
+    play = !confirm("\u25A0 1 PLAYER ?")  //
+    mobi=1*Boolean(navigator.userAgent.match(/Android/i)); sq=0; ho=0  //
+    var canvas = document.getElementById("game");
+
+  canvas.height = window.innerHeight
+  canvas.width = window.innerWidth
+if(mobi) document.body.style.height = (window.innerHeight + 50) + 'px'  //enable hide adress bar
+canvas.style.backgroundColor = (play)?"green":"#353535"
+
+    this.width = canvas.width;
+    this.height = canvas.height;
+    this.context = canvas.getContext("2d");
+    this.context.fillStyle = "white";
+    this.context.font = "24px 'Rationale', Helvetica";  //Press+Start+2P
+    this.context.setLineDash([5, 15]);  //
+    this.context.strokeStyle="white";  //
+    this.keys = new KeyListener();
+
+var offs=(play && mobi)?40:0
+    this.p1 = new Paddle((play)? 5+offs : this.width*3/4 - 7, 0);
+    this.p1.y = this.height/2 - this.p1.height/2;
+    this.p2 = new Paddle(this.width - 5-offs - 3, 0);
+    this.p2.y = this.height/2 - this.p2.height/2;
+
+    this.ball = new Ball();
+    this.p1.score--;this.score(this.p1)  //
+
+ this.p4 = new Paddle(this.width/4 - 5 - 2, 0)
+ this.p3 = new Paddle(this.width*3/4 - 5 - 2, 0)
+}
+
+Game.prototype.draw = function()
+{
+    this.context.clearRect(0, 0, this.width, this.height);
+ this.context.beginPath();
+ this.context.moveTo(this.width/2,0);
+ this.context.lineTo(this.width/2, this.height);
+ this.context.stroke();
+
+    this.ball.draw(this.context);
+
+    if(play||sq) {this.context.fillStyle="yellow"; this.p1.draw(this.context); if(ho) this.p3.draw(this.context); this.context.fillStyle="blue"}
+    if(ho) this.p4.draw(this.context)
+    this.p2.draw(this.context); this.context.fillStyle="white"
+    //
+ if(ho) { this.context.fillRect(0,0,2,this.height/4); this.context.fillRect(0,this.height*3/4,2,this.height)
+    this.context.fillRect(this.width-2,0,2,this.height/4); this.context.fillRect(this.width-2,this.height*3/4,2,this.height) }
+};
+ 
+Game.prototype.update = function() 
+{
+    this.ball.update();
+
+    // To which Y direction the paddle is moving
+//var p2y=this.p2.y, p1y=this.p1.y 
+if(!sq && !play && mobi && this.keys.isPressed(87)) sq=1  //squash 2p
+if(play && this.keys.isPressed(72)) ho=1  //h=hockey
+if(!musik && typeof AudioContext && this.keys.isPressed(79)) osci()  //o=spatial audio
+
+if(play == mobi) {  //&&
+ if(mouse.y) this.p2.y = mouse.y - padh/2
+ if(mouse.y2) this.p1.y = mouse.y2 - padh/2
+ if(this.keys.isPressed(38)) mobi=1 }
+else {
+    if (this.keys.isPressed(83)) { // DOWN
+        this.p1.y = Math.min(this.height - this.p1.height, this.p1.y + 8);
+    } else if (this.keys.isPressed(87)) { // UP
+        this.p1.y = Math.max(0, this.p1.y - 8);
+    }
+
+    if (this.keys.isPressed(40) || tiltValue<-3 || hasGP && navigator.getGamepads()[0].axes[1]>0.5) { // DOWN
+        this.p2.y = Math.min(this.height - this.p2.height, this.p2.y + 8);  //4
+    } else if (this.keys.isPressed(38) || tiltValue>3 || hasGP && navigator.getGamepads()[0].axes[1]<-0.5) { // UP
+        this.p2.y = Math.max(0, this.p2.y - 8);
+    }
+if(ho) {this.p4.y = this.p2.y; this.p3.y = this.p1.y}
+}
+
+this.collr(this.p2); if(play) this.colll(this.p1); else if(sq) this.collr(this.p1)
+if(ho) { this.collr(this.p4);this.colll(this.p3); this.colll(this.p4,1);this.collr(this.p3,1) }
+
+    // Top and bottom collision
+    if ((this.ball.vy < 0 && this.ball.y < 0) || (this.ball.vy > 0 && this.ball.y + this.ball.height > this.height))
+        this.ball.vy = -this.ball.vy;
+
+    if (this.ball.x >= this.width)
+     if(ho && (this.ball.y < this.height/4 || this.ball.y > this.height*3/4)) this.ball.vx = -this.ball.vx; else this.score(this.p1)
+    else if (this.ball.x + this.ball.width <= 0)
+     {if(ho && (this.ball.y < this.height/4 || this.ball.y > this.height*3/4) || !play) this.ball.vx = -this.ball.vx; else this.score(this.p2)
+     if(!play) {this.p2.score++;document.getElementById("display2").textContent=this.p2.score}}        
+
+if(musik) {filter1.pan.value = this.ball.x/this.width*2-1; filter2.gain.value = this.ball.y/this.height}
+};
+
+Game.prototype.collr = function(p,f) { //p=this.p2
+    if (this.ball.vx > 0) {
+        if (p.x <= this.ball.x + this.ball.width && p.x > this.ball.x - this.ball.vx + this.ball.width) {
+            var k = (this.ball.x + this.ball.width - p.x)/this.ball.vx;
+            var y = this.ball.vy*k + (this.ball.y - this.ball.vy);
+            if (y >= p.y && y + this.ball.height <= p.y + p.height) {
+                // collides with right paddle
+        if(!f) {this.ball.x = p.x - this.ball.width;
+                this.ball.y = Math.floor(this.ball.y - this.ball.vy + this.ball.vy*k);
+                this.ball.vx = -this.ball.vx}
+                else this.ball.vy += ((p.y-this.ball.y)/p.height*2+1)*3  //spin
+      }}}}
+
+Game.prototype.colll = function(p,f) { //p=this.p1
+     if(this.ball.vx < 0) {
+        if (p.x + p.width >= this.ball.x && p.x + p.width < this.ball.x - this.ball.vx) {
+            var k = (p.x + p.width - this.ball.x)/-this.ball.vx;
+            var y = this.ball.vy*k + (this.ball.y - this.ball.vy);
+            if (y >= p.y && y + this.ball.height <= p.y + p.height) {
+                // collides with the left paddle
+        if(!f) {this.ball.x = p.x + p.width;
+                this.ball.y = Math.floor(this.ball.y - this.ball.vy + this.ball.vy*k);
+                this.ball.vx = -this.ball.vx}
+                else this.ball.vy += ((p.y-this.ball.y)/p.height*2+1)*3  //if(this.p2.y != p2y) this.ball.vy += (this.p2.y < p2y)?-0.2:0.2
+      }}}}
+
+Game.prototype.score = function(p)
+{
+    // player scores
+    audiop.play()
+    p.score++;
+    var player = p == this.p1 ? 0 : 1;
+
+    // set ball position
+    this.ball.x = this.width/2;
+    this.ball.y = p.y + p.height/2;
+ 
+    // set ball velocity
+    this.ball.vy = (Math.random()*6 - 3) *velo;  //Math.floor *12 - 6
+    this.ball.vx = (7 - Math.abs(this.ball.vy/velo*angle)) *velo;
+    if (player != 1)  //==
+        this.ball.vx *= -1;
+
+    document.getElementById("display1").textContent=this.p1.score
+    document.getElementById("display2").textContent=this.p2.score
+    if(p.score==cap) {game.update();game.draw(); velo+=.2; tot[player]++;console.log(tot[0]+":"+tot[1]); game = new Game();console.log(velo)}  //increase velocity
+    t=500
+};
+
+
+// PADDLE
+function Paddle(x,y) {
+    this.x = x;
+    this.y = y;
+    this.width = 3;
+    this.height = padh;  //28
+    this.score = 0;
+}
+
+Paddle.prototype.draw = function(p)
+{ p.fillRect(this.x, this.y, this.width, this.height) }
+
+// BALL
+function Ball() {
+    this.x = 0;
+    this.y = 0;
+    this.vx = 0;
+    this.vy = 0;
+    this.width = 4;
+    this.height = 4;
+}
+
+Ball.prototype.update = function()
+{
+    this.x += this.vx;
+    this.y += this.vy;
+};
+
+Ball.prototype.draw = function(p)
+{ p.fillRect(this.x, this.y, this.width, this.height) }
+
+// KEY LISTENER
+function KeyListener() {
+    this.pressedKeys = [];
+
+    this.keydown = function(e) {
+        this.pressedKeys[e.keyCode] = true;
+    };
+
+    this.keyup = function(e) {
+        this.pressedKeys[e.keyCode] = false;
+    };
+
+    document.addEventListener("keydown", this.keydown.bind(this));
+    document.addEventListener("keyup", this.keyup.bind(this));
+}
+
+KeyListener.prototype.isPressed = function(key)
+{
+    return this.pressedKeys[key] ? true : false;
+};
+
+KeyListener.prototype.addKeyPressListener = function(keyCode, callback)
+{
+    document.addEventListener("keypress", function(e) {
+        if (e.keyCode == keyCode)
+            callback(e);
+    });
+};
+
+
+// Initialize our game instance
+var audiop = new Audio("ping_pong_8bit_peeeeeep.ogg")
+var game = new Game();
+ 
+function MainLoop() {
+    t=33.3333  //
+    game.update();
+    game.draw();
+    // Call the main loop again at a frame rate of 30fps
+    setTimeout(function() {requestAnimationFrame(MainLoop)}, t)  //setTimeout(MainLoop, 33.3333);
+}
+
+function osci() { musik = new AudioContext()
+var quelle = musik.createOscillator(); quelle.frequency.value = 150
+filter1 = musik.createStereoPanner(); filter2 = musik.createGain()  //chro, FF37
+quelle.connect(filter1); filter1.connect(filter2); filter2.connect(musik.destination)
+quelle.start() }
+
+var tiltValue = 0, at=1, tot=[0,0], musik
+window.addEventListener('deviceorientation', function (e) {tiltValue=e.gamma}, false);
+
+	var trackPosition1 = function(e){e.preventDefault(); mouse.y = e.targetTouches?e.targetTouches[0].pageY:e.pageY; if(at) audiop.play();at=0}  //trigger audio
+	var trackPosition2 = function(e){e.preventDefault(); mouse.y2 = e.targetTouches[0].pageY}
+
+var mouse = {};
+document.getElementById("r").addEventListener("touchmove", trackPosition1, false);
+document.getElementById("l").addEventListener("touchmove", trackPosition2, false);
+document.getElementById("game").addEventListener("mousemove", trackPosition1, false);
+
+var hasGP; if("getGamepads" in navigator) window.addEventListener("gamepadconnected", function(e) {hasGP=1})
+
+window.addEventListener('resize', function (e) {game = new Game()});
+
+// Start the game execution
+MainLoop();
+</script>
+    </body>
+</html>
