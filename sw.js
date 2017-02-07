@@ -10,7 +10,7 @@ self.addEventListener('install', event => {
             // cache all the static assets required for offline use.
             return cache.addAll([
                 './',
-                'index.htm',
+                'index.html',
                 'ping_pong_8bit_peeeeeep.ogg'
             ]);
         }).then(() => {
